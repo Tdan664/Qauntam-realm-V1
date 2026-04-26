@@ -1,0 +1,47 @@
+*1. `main.py`* ← Your API code
+from fastapi import FastAPI, WebSocket
+from pydantic import BaseModel
+
+app = FastAPI()
+connected_clients = []
+
+class Signal(BaseModel):
+    broker: str
+    symbol: str
+    action: str
+    volume: float
+    stop_loss: float
+    take_profit: float
+    token: str
+    strategy: str
+    reward: int
+
+@app.get("/")
+async def root():
+    return {"status": "API Live", "clients_connected": len(connected_clients)}
+
+@app.post("/send_signal")
+async def send_signal(signal: Signal):
+    if signal.token!= "YOUR_SECRET_MENTOR_TOKEN":
+        return {"status": "error", "message": "Invalid token"}
+
+    for client in connected_clients:
+        await client.send_json(signal.dict())
+
+    return {"status": "success", "message": f"Signal broadcasted to {len(connected_clients)} clients"}
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    connected_clients.append(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except:
+        connected_clients.remove(websocket)
+*2. `requirements.txt`* ← Dependencies
+fastapi
+uvicorn[standard]
+pydantic
+websockets
+Put both in a folder named whatever you want, like `my-api`
